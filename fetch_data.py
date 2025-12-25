@@ -2,6 +2,26 @@
 Fetches minute-level raw OHLCV data + trade count and VWAP from Alpaca. Stores it in "unprocessed_data.parquet"
 '''
 
+
+
+
+
+
+
+'''
+Checks to see if there exists raw_data.parquet
+if it does exist:
+    Download all data that exists since the latest timestamp
+    Truncate raw_data.parquet so that it is the proper length
+if it doesn't exist:
+    Download data to create raw_data.parquet
+    
+Every minute, fetch the latest bars for all stocks in universe
+'''
+
+
+
+
 # !/usr/bin/env python3
 
 import os
@@ -11,15 +31,18 @@ from dotenv import load_dotenv
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
+from universe import companies
 
-# ==================== CONFIGURATION ====================
-# Adjust all parameters here
-
-# Symbols to fetch
-SYMBOLS = ['NVDA','BEN']
-
-# Date range
-DAYS_OF_HISTORY = 30  # How many days back to fetch
+SYMBOLS = [company[0] for company in companies]
+#todo: remove
+SYMBOLS = ["NVDA"]
+DAYS_OF_HISTORY = 2  # How long the parquet file will be
+print(companies)
+print(SYMBOLS)
+if os.path.exists("raw_data.parquet"):
+    print("File exists!")
+else:
+    print("File does not exist.")
 END_DATE = datetime.now()  # End date (default: now)
 START_DATE = END_DATE - timedelta(days=DAYS_OF_HISTORY)
 
