@@ -1,3 +1,5 @@
+Information on what needs to be normalized is in a chat gpt thread under robbie platt
+
 These are the things that I need to do in process_data.py:
 Check to see if there already exists processed_data.parquet
 Interpolate gaps in raw_data
