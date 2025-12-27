@@ -5,3 +5,4 @@ torch
 pyarrow
 alpaca-py
 dotenv
+tqdm

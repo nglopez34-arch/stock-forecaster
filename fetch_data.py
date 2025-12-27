@@ -1,66 +1,61 @@
-'''
-Fetches minute-level raw OHLCV data + trade count and VWAP from Alpaca. Stores it in "unprocessed_data.parquet"
-'''
-
-
-
-
-
-
-
-'''
-Checks to see if there exists raw_data.parquet
-if it does exist:
-    Download all data that exists since the latest timestamp
-    Truncate raw_data.parquet so that it is the proper length
-if it doesn't exist:
-    Download data to create raw_data.parquet
-    
-Every minute, fetch the latest bars for all stocks in universe
-'''
-
-
-
+"""
+Fetches minute-level raw OHLCV data + trade count and VWAP from Alpaca. Stores it in "raw_data.parquet"
+"""
+#todo:
+# Make it so that there is only data from when the market is open (not just hours, but also holidays)
+# Remove symbols from universe that have too many holes in data
 
 # !/usr/bin/env python3
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 from dotenv import load_dotenv
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from universe import companies
-
-SYMBOLS = [company[0] for company in companies]
-#todo: remove
-SYMBOLS = ["NVDA"]
-DAYS_OF_HISTORY = 2  # How long the parquet file will be
-print(companies)
-print(SYMBOLS)
-if os.path.exists("raw_data.parquet"):
-    print("File exists!")
-else:
-    print("File does not exist.")
-END_DATE = datetime.now()  # End date (default: now)
-START_DATE = END_DATE - timedelta(days=DAYS_OF_HISTORY)
-
-# Data granularity
-TIMEFRAME = TimeFrame.Minute  # Options: Minute, Hour, Day, Week, Month
-
-# Output settings
-
-output_path = 'raw_data.parquet'
+from tqdm import tqdm
+import time
 
 
-# API settings (will be loaded from .env)
-# Required in .env: KEY, SECRET
+def fetch_symbol_data(client, symbol, start_date, end_date):
+    """Fetch data for a single symbol with error handling"""
+    try:
+        request = StockBarsRequest(
+            symbol_or_symbols=[symbol],
+            timeframe=TimeFrame.Minute,
+            start=start_date,
+            end=end_date
+        )
+        bars = client.get_stock_bars(request)
+        if bars.df.empty:
+            return pd.DataFrame()
 
-# ==================== END CONFIGURATION ====================
+        df = bars.df.reset_index()
+        return df
+    except Exception as e:
+        print(f"\nError fetching {symbol}: {e}")
+        return pd.DataFrame()
+
+
+def clean_dataframe(df):
+    """Remove duplicates and sort the dataframe"""
+    if df.empty:
+        return df
+
+    # Remove duplicate (symbol, timestamp) pairs, keeping the last occurrence
+    df = df.drop_duplicates(subset=['symbol', 'timestamp'], keep='last')
+
+    # Sort by symbol and timestamp for clean organization
+    df = df.sort_values(['symbol', 'timestamp']).reset_index(drop=True)
+
+    return df
 
 
 def main():
+    symbols = [company[0] for company in companies]
+
     # Load environment variables
     load_dotenv()
     api_key = os.getenv('KEY')
@@ -71,49 +66,91 @@ def main():
 
     # Initialize Alpaca client
     client = StockHistoricalDataClient(api_key, secret_key)
+    years_of_history = 0.5  # How long the parquet file will be
 
-    print(f"Fetching {DAYS_OF_HISTORY} days of {TIMEFRAME} data for {len(SYMBOLS)} symbols")
-    print(f"Date range: {START_DATE.strftime('%Y-%m-%d')} to {END_DATE.strftime('%Y-%m-%d')}")
+    if os.path.exists("raw_data.parquet"):
+        print("Loading existing raw_data.parquet...")
+        df = pd.read_parquet("raw_data.parquet")
+        newest_ts = df['timestamp'].max()
+        oldest_ts = df['timestamp'].min()
 
-    # Create request
-    request = StockBarsRequest(
-        symbol_or_symbols=SYMBOLS,
-        timeframe=TIMEFRAME,
-        start=START_DATE,
-        end=END_DATE
-    )
+        # Fetch new data for each symbol
+        new_data_list = []
+        for symbol in tqdm(symbols, desc="Fetching symbols"):
+            symbol_df = fetch_symbol_data(
+                client,
+                symbol,
+                start_date=newest_ts,
+                end_date=datetime.now(timezone.utc) - timedelta(minutes=15)
+            )
+            if not symbol_df.empty:
+                # Filter out data that's not actually newer
+                symbol_df = symbol_df[symbol_df['timestamp'] > newest_ts]
+                if not symbol_df.empty:
+                    new_data_list.append(symbol_df)
+            time.sleep(1)
 
-    # Fetch data
-    print("\nFetching data from Alpaca...")
-    bars = client.get_stock_bars(request)
+        # Combine new data
+        if new_data_list:
+            new_df = pd.concat(new_data_list, ignore_index=True)
+            print(f"\nFetched {len(new_df)} new rows")
 
-    # Convert to DataFrame
-    print("Converting to DataFrame...")
-    df = bars.df
+            # Combine with existing data
+            df = pd.concat([df, new_df], ignore_index=True)
+        else:
+            print("\nNo new data to add")
 
-    if df.empty:
-        print("No data returned from API")
-        return
+        # Clean the dataframe (remove duplicates, sort)
+        df = clean_dataframe(df)
 
-    # Reset index to make symbol and timestamp columns
-    df = df.reset_index()
+        # Truncate old data
+        newest_ts = df['timestamp'].max()
+        rows_before_truncation = len(df)
 
-    print(f"\nFetched {len(df)} total bars")
-    print(f"Symbols: {df['symbol'].unique().tolist()}")
-    print(f"\nData shape: {df.shape}")
-    print(f"Date range in data: {df['timestamp'].min()} to {df['timestamp'].max()}")
+        if oldest_ts < newest_ts - timedelta(days=years_of_history * 365):
+            cutoff = newest_ts - timedelta(days=years_of_history * 365)
+            cutoff = cutoff.replace(hour=0, minute=0, second=0, microsecond=0)
+            df = df[df['timestamp'] >= cutoff]
+            rows_after_truncation = len(df)
+            print(f"Removed {rows_before_truncation - rows_after_truncation} old rows")
 
+        # Save the cleaned data
+        df.to_parquet("raw_data.parquet", index=False)
+        print(f"\nFile contains data from {df['timestamp'].min()} to {df['timestamp'].max()}")
+        print(f"Total rows: {len(df)}")
+        print(f"Unique symbols: {df['symbol'].nunique()}")
 
-    # Save to parquet
-    print(f"\nSaving to {output_path}...")
-    df.to_parquet(output_path, index=False, compression='snappy')
+    else:
+        print("Raw data file does not exist. Creating new file...")
+        start_date = datetime.now(timezone.utc)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_date -= timedelta(days=years_of_history * 365)
+        end_date = datetime.now(timezone.utc) - timedelta(minutes=15)
 
-    # Show sample data
-    print("\nSample data:")
-    print(df.head())
+        print(f"\nFetching data from {start_date} to {end_date}...")
 
-    print(f"\n✓ Complete! Data saved to {output_path}")
-    print(f"  File size: {os.path.getsize(output_path) / (1024 * 1024):.2f} MB")
+        # Fetch data for each symbol
+        data_list = []
+        for symbol in tqdm(symbols, desc="Fetching symbols"):
+            symbol_df = fetch_symbol_data(client, symbol, start_date, end_date)
+            if not symbol_df.empty:
+                data_list.append(symbol_df)
+            time.sleep(1)
+
+        # Combine all data
+        if data_list:
+            df = pd.concat(data_list, ignore_index=True)
+
+            # Clean the dataframe (remove duplicates, sort)
+            df = clean_dataframe(df)
+
+            # Save to parquet
+            df.to_parquet("raw_data.parquet", index=False)
+            print(f"\nCreated raw_data.parquet with {len(df)} rows")
+            print(f"Data from {df['timestamp'].min()} to {df['timestamp'].max()}")
+            print(f"Unique symbols: {df['symbol'].nunique()}")
+        else:
+            print("\nNo data was fetched!")
 
 
 if __name__ == '__main__':

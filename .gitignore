@@ -6,3 +6,6 @@ __pycache__/
 # virtual environments
 venv/
 .idea/
+# datasets
+raw_data.parquet
+processed_data.parquet
