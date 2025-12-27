@@ -8,4 +8,5 @@ venv/
 .idea/
 # datasets
 raw_data.parquet
+data_w_features.parquet
 processed_data.parquet
