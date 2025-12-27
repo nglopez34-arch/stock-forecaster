@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta, timezone
-right_now = datetime.now(timezone.utc)
-print(right_now)
-other_time = right_now - timedelta(days=1)
-print(other_time)
+import numpy as np
+import matplotlib.pyplot as plt
+x = np.arange(10)
+def func(x):
+    return np.exp((np.log(0.5) / 5) * x)
+y = func(x)
+y = y / np.sum(y)
+print(np.sum(y))
+print(y)
