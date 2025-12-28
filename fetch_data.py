@@ -65,7 +65,7 @@ def main():
 
     # Initialize Alpaca client
     client = StockHistoricalDataClient(api_key, secret_key)
-    years_of_history = 0.5  # How long the parquet file will be
+    years_of_history = 0.05  # How long the parquet file will be
 
     if os.path.exists("raw_data.parquet"):
         print("Loading existing raw_data.parquet...")
