@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 from multiprocessing import Pool, cpu_count
+import time
 
 
 def clean_dataframe(df):
@@ -146,6 +147,7 @@ def parallel_preprocess(df):
 
 # Example usage
 if __name__ == "__main__":
+    start_time = time.time()
     raw_data = pd.read_parquet("raw_data.parquet")
 
     # If there already exists an incomplete file
@@ -171,3 +173,5 @@ if __name__ == "__main__":
 
     featured_data = clean_dataframe(featured_data)
     featured_data.to_parquet("data_w_features.parquet")
+    end_time = time.time()
+    print(f"It took {end_time - start_time} seconds to compute")
