@@ -55,7 +55,6 @@ def clean_dataframe(df):
 
 def main():
     symbols = [company[0] for company in companies]
-
     # Load environment variables
     load_dotenv()
     api_key = os.getenv('KEY')
