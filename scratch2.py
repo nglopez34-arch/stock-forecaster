@@ -1,9 +1,20 @@
-import numpy as np
-import matplotlib.pyplot as plt
-x = np.arange(10)
-def func(x):
-    return np.exp((np.log(0.5) / 5) * x)
-y = func(x)
-y = y / np.sum(y)
-print(np.sum(y))
-print(y)
+["elixir collector", 10,3],
+["dark elixir drill", 2,3],
+["barbarian king", 14,1],
+['dark elixir storage', 1,3],
+['gold mine', 8,3],
+['gold storage', 5,3],
+['elixir storage', 5,3],
+['bomb tower', 1,1],
+['air defense', 3,1],
+['wizard tower', 5,1],
+['hidden tesla', 5,1],
+['mortar', 6,1],
+['archer tower', 10,1],
+['air sweeper', 1,1],
+['cannon', 8,1],
+['skeleton trap', 2,2],
+['spring trap', 9,2],
+['giant bomb', 4,2],
+['bomb', 5,2],
+['air bomb', 5,2]
