@@ -1,9 +1,9 @@
 Information on what needs to be normalized is in a chat gpt thread under robbie platt
 
-These are the things that I need to do in process_data.py:
-Check to see if there already exists processed_data.parquet
-Interpolate gaps in raw_data
-Look for outliers and remove them (optional)
+These are the things that I need to do in generate_features.py:
+Check to see if there already exists data_w_features.parquet
+Interpolate gaps in raw_data.parquet
+Look for outliers and winsorize them
 
 * = feature for volatility forecaster (TCN)
 + = feature for log return forecaster (LSTM)
