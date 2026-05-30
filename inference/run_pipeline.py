@@ -1,28 +1,30 @@
 """
 Orchestrates the data pipeline.
-Both this file and fetch_data.py live in:
-  /home/graham/PycharmProjects/overnight/inference/
+Starts right before trading, and simply collects raw data until a sufficent amount has been collected. (120 min?)
+Once a sufficient amount has been collected, runs through the rest of the pipeline.
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from data.universe import companies
 from fetch_data import update_raw_data
+from gen_features import generate_features
+from zoneinfo import ZoneInfo
 
-UPDATE_INTERVAL_SECONDS = 120
+import requests
+import sys
 
-def run_once():
-    print(f"\n[orchestrator] Update triggered at {datetime.now().strftime('%H:%M:%S')}")
-    update_raw_data(companies)
+API_KEY = "your_key"
+API_SECRET = "your_secret"
 
+# --- Market open check ---
+clock = requests.get(
+    "https://api.alpaca.markets/v1/clock",
+    headers={"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": API_SECRET}
+).json()
 
-def run_loop():
-    print(f"[orchestrator] Starting live update loop (every {UPDATE_INTERVAL_SECONDS}s).")
-    while True:
-        run_once()
-        print(f"[orchestrator] Sleeping {UPDATE_INTERVAL_SECONDS}s...")
-        time.sleep(UPDATE_INTERVAL_SECONDS)
+if not clock["is_open"]:
+    print(f"Market is closed today. Next open: {clock['next_open']}")
+    sys.exit(0)
 
-
-if __name__ == "__main__":
-    run_once()
+# --- Rest of your script ---
