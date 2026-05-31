@@ -7,12 +7,31 @@ import numpy as np
 import os
 from multiprocessing import Pool, cpu_count
 import time
+from pathlib import Path
+
+
+
 
 def generate_features():
-    pass
+    raw_data_df = pd.read_parquet("raw_data.parquet")
 
-"""
-Read raw_data.parquet and figure out what the oldest and newest time stamps are
-read data_w_features.parquet and figure out what the oldest and newest time stamps are
-generate data with features according to the gaps, thereby making it so that data_w_features.parquet is the same
-"""
+    #figure out what minutes we will process
+    #syntax may need to be changed depending on whether the timestamp is a column or an index
+    oldest_raw_timestamp = raw_data_df["timestamp"].min()
+    newest_raw_timestamp = raw_data_df["timestamp"].max()
+
+    featured_data_filepath = Path("data_w_features.parquet")
+
+    #if data_w_features doesn't exist, start at the beginning
+    if not featured_data_filepath.exists():
+        oldest_ts_to_process = oldest_raw_timestamp
+        newest_ts_to_process = newest_raw_timestamp
+        data_w_features_df = pd.DataFrame()
+
+    #if data_w_features already exists
+    else:
+        data_w_features_df = pd.read_parquet("data_w_features.parquet")
+        oldest_ts_to_process = data_w_features_df["timestamp"].max()
+        newest_ts_to_process = newest_raw_timestamp
+
+    #now we know that we must generate features between oldest_ts and newest_ts so that the two parquets have the same time stamps
