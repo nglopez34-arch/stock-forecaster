@@ -2,6 +2,7 @@
 Fetches and appends the latest minute-level OHLCV data from Alpaca into raw_data.parquet.
 No cleaning or processing — raw append only. File contains current trading day only.
 """
+#TODO: make sure that there are no weird pre or post hours data. Like 8 am??
 
 import os
 import time

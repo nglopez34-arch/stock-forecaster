@@ -1,9 +1,8 @@
 """
-Orchestrates the data pipeline.
-Starts right before trading, and simply collects raw data until a sufficent amount has been collected. (120 min?)
-Once a sufficient amount has been collected, runs through the rest of the pipeline.
+This is just scaffolding to help us build the project.
+It is used to simulate certain parts of run_pipeline.py
+Things will be commented out
 """
-
 import os
 import time
 from datetime import datetime, timedelta, date
@@ -42,46 +41,48 @@ poll = 30                  # max seconds to sleep at once (accurate across suspe
 
 
 def main():
-    archive_and_clean()
+    #archive_and_clean()
     client = TradingClient(API_KEY, API_SECRET, paper=PAPER)
 
+    # hours = todays_hours(client)
+    # if hours is None:
+    #     print("Market closed today — exiting.")
+    #     return
+    # market_open, market_close = hours
+    #
+    # if (market_open.strftime("%H:%M"), market_close.strftime("%H:%M")) != (normal_open, normal_close):
+    #     print(f"Abnormal hours today ({market_open:%H:%M}–{market_close:%H:%M} ET) — exiting.")
+    #     return
+    #
+    # print(f"Open {market_open:%H:%M}, close {market_close:%H:%M} ET. Waiting for open…")
+    # sleep_until(market_open)
+    # print("The Market has maybe opened!")
 
-    #time it so that the heart of the script executes at the proper time
-    hours = todays_hours(client)
-    if hours is None:
-        print("Market closed today — exiting.")
-        return
-    market_open, market_close = hours
 
-    if (market_open.strftime("%H:%M"), market_close.strftime("%H:%M")) != (normal_open, normal_close):
-        print(f"Abnormal hours today ({market_open:%H:%M}–{market_close:%H:%M} ET) — exiting.")
-        return
 
-    print(f"Open {market_open:%H:%M}, close {market_close:%H:%M} ET. Waiting for open…")
-    sleep_until(market_open)
-    print("The Market has opened!")
 
-    #Do nothing but collect raw data for a while...
-    print("Now collecting raw data...")
-    end = market_open + timedelta(minutes=phase1_minutes)
-    while datetime.now(ET) < end:
-        start = datetime.now(ET)
-        update_raw_data(companies)
-        print("Raw data updated.")
-        sleep_until(min(start + interval, end))
+    # #Do nothing but collect raw data for a while...
+    # print("Now collecting raw data...")
+    # end = market_open + timedelta(minutes=phase1_minutes)
+    # while datetime.now(ET) < end:
+    #     start = datetime.now(ET)
+    #     update_raw_data(companies)
+    #     print("Raw data updated.")
+    #     sleep_until(min(start + interval, end))
 
 
 
     #continue to collect raw data, but now process it and generate forecasts also
     print("Now generating forecasts!")
-    end = market_close - timedelta(minutes=wind_down_minutes)
-    while datetime.now(ET) < end:
+    #end = market_close - timedelta(minutes=wind_down_minutes)
+    #while datetime.now(ET) < end:
+    while True:
         start = datetime.now(ET)
-        update_raw_data(companies)
+        #update_raw_data(companies)
         generate_features()
-        normalize_data()
-        generate_forecasts()
-        sleep_until(min(start + interval, end))
+        #normalize_data()
+        #generate_forecasts()
+        #sleep_until((start + interval))
     print("Done generating forecasts for today!")
 
 
